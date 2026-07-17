@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shared-diary-mcp"
+version = "0.1.0"
+description = "A shared chronological diary for humans and AI participants"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "YUNSHENG613 and contributors" }]
+dependencies = [
+    "starlette>=0.46,<1",
+    "uvicorn>=0.34,<1",
+]
+
+[project.scripts]
+shared-diary-mcp = "shared_diary.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/shared_diary"]
+
+[tool.hatch.build]
+include = [
+    "src/shared_diary/**/*.py",
+    "src/shared_diary/static/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>共同日记</title>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <div class="paper-grain" aria-hidden="true"></div>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">SHARED DIARY</p>
+      <h1>共同日记</h1>
+      <p id="welcome" class="muted">正在翻开你的那一页……</p>
+    </div>
+    <button id="themeButton" class="icon-button" aria-label="自定义配色" title="自定义配色">◐</button>
+  </header>
+
+  <main>
+    <section class="composer paper-card">
+      <div class="section-heading">
+        <h2>写下这一刻</h2>
+        <span class="ink-mark">✦</span>
+      </div>
+      <textarea id="entryBody" rows="5" placeholder="不用标题，也不用分类。想写什么就写什么。"></textarea>
+      <div class="composer-grid">
+        <label>发生时间<input id="occurredAt" type="datetime-local"></label>
+        <label>可见方式
+          <select id="visibility">
+            <option value="shared">共同可见</option>
+            <option value="private">仅自己可见</option>
+            <option value="selected">指定可见</option>
+            <option value="challenge">趣味问题锁</option>
+          </select>
+        </label>
+      </div>
+      <div id="audiencePanel" class="subpanel hidden">
+        <p class="field-label">给谁看</p>
+        <div id="audienceList" class="chip-list"></div>
+      </div>
+      <div id="challengePanel" class="subpanel hidden">
+        <label>问题<input id="challengeQuestion" placeholder="我们之间的暗号是什么？"></label>
+        <label>可接受答案<input id="challengeAnswers" placeholder="多个答案请用 | 分隔"></label>
+        <label>提示（可选）<input id="challengeHint" placeholder="给一点点提示"></label>
+        <label>门缝预告（可选）<input id="preview" placeholder="不剧透正文的一小句"></label>
+      </div>
+      <div class="composer-actions">
+        <span id="composerStatus" class="muted"></span>
+        <button id="saveEntry" class="primary-button">写进今天</button>
+      </div>
+    </section>
+
+    <section class="timeline-section">
+      <div class="section-heading timeline-heading">
+        <div>
+          <p class="eyebrow">TIMELINE</p>
+          <h2>沿着时间往回翻</h2>
+        </div>
+        <div class="timeline-actions">
+          <button id="exportButton" class="text-button">导出备份</button>
+          <button id="refreshButton" class="text-button">重新翻阅</button>
+        </div>
+      </div>
+      <div id="timeline" class="timeline" aria-live="polite"></div>
+      <p id="emptyState" class="empty-state hidden">这里还是一页空白。第一行字在等你。</p>
+    </section>
+  </main>
+
+  <dialog id="themeDialog" class="theme-dialog">
+    <form method="dialog">
+      <div class="section-heading">
+        <h2>纸页配色</h2>
+        <button class="icon-button" value="cancel" aria-label="关闭">×</button>
+      </div>
+      <div id="presetList" class="preset-list"></div>
+      <div class="color-grid">
+        <label>纸张<input type="color" data-theme-key="paper"></label>
+        <label>墨色<input type="color" data-theme-key="ink"></label>
+        <label>强调<input type="color" data-theme-key="accent"></label>
+        <label>回应卡片<input type="color" data-theme-key="reply"></label>
+      </div>
+      <div class="dialog-actions">
+        <button id="resetTheme" type="button" class="text-button">恢复默认</button>
+        <button value="confirm" class="primary-button">收好配色</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="entryTemplate">
+    <article class="entry paper-card">
+      <div class="entry-meta">
+        <div>
+          <strong class="entry-author"><span class="unread-dot hidden" title="还没读过的新日记"></span><span class="entry-author-name"></span></strong>
+          <time class="entry-time"></time>
+        </div>
+        <div class="entry-meta-side">
+          <span class="visibility-badge"></span>
+          <div class="entry-actions hidden">
+            <button class="edit-entry-button text-button" type="button">编辑</button>
+            <button class="delete-entry-button text-button danger-button" type="button">删除</button>
+          </div>
+        </div>
+      </div>
+      <p class="entry-preview hidden"></p>
+      <div class="locked-box hidden">
+        <span class="lock-icon">⌁</span>
+        <p class="lock-question"></p>
+        <p class="lock-hint muted"></p>
+        <div class="unlock-row">
+          <input class="unlock-answer" placeholder="输入你的答案">
+          <button class="unlock-button text-button">试着打开</button>
+        </div>
+        <p class="unlock-status muted"></p>
+      </div>
+      <div class="entry-body"></div>
+      <div class="edit-entry-row hidden">
+        <textarea class="edit-entry-input" rows="5"></textarea>
+        <div class="edit-entry-actions">
+          <span class="edit-entry-status muted"></span>
+          <button class="cancel-edit-button text-button" type="button">取消</button>
+          <button class="save-edit-button primary-button" type="button">保存修改</button>
+        </div>
+      </div>
+      <div class="replies"></div>
+      <div class="reply-row hidden">
+        <textarea class="reply-input" rows="2" placeholder="回应这一页……"></textarea>
+        <button class="reply-button text-button">留下回应</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="assets/app.js?v=8" defer></script>
+</body>
+</html>

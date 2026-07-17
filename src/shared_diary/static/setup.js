@@ -1,0 +1,82 @@
+const adminKey = location.pathname.split('/').filter(Boolean)[1];
+const apiRoot = `/admin-api/${encodeURIComponent(adminKey)}`;
+const list = document.querySelector('#participant-list');
+const keyCard = document.querySelector('#new-key');
+const statusLine = document.querySelector('#form-status');
+
+async function request(path, options = {}) {
+  const response = await fetch(`${apiRoot}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || '请求失败');
+  return payload;
+}
+
+function showKey(payload) {
+  document.querySelector('#diary-url').value = payload.diary_url;
+  document.querySelector('#mcp-url').value = payload.mcp_url;
+  keyCard.hidden = false;
+  keyCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function refresh() {
+  const payload = await request('/participants');
+  list.replaceChildren();
+  if (!payload.participants.length) {
+    list.textContent = '还没有参与者。先邀请第一位住进来吧。';
+    return;
+  }
+  for (const person of payload.participants) {
+    const row = document.createElement('div');
+    row.className = 'participant-row';
+    const identity = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = person.display_name;
+    const kind = document.createElement('span');
+    kind.className = 'muted';
+    kind.textContent = person.kind === 'ai' ? 'AI' : '人类';
+    identity.append(name, kind);
+    const rotate = document.createElement('button');
+    rotate.className = 'secondary';
+    rotate.textContent = '换钥匙';
+    rotate.addEventListener('click', async () => {
+      if (!confirm(`为 ${person.display_name} 更换钥匙？旧链接会立刻失效。`)) return;
+      showKey(await request(`/participants/${encodeURIComponent(person.id)}/rotate-key`, { method: 'POST' }));
+    });
+    row.append(identity, rotate);
+    list.append(row);
+  }
+}
+
+document.querySelector('#participant-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  statusLine.textContent = '正在制作钥匙…';
+  try {
+    const payload = await request('/participants', {
+      method: 'POST',
+      body: JSON.stringify({
+        display_name: document.querySelector('#display-name').value,
+        kind: document.querySelector('#kind').value,
+      }),
+    });
+    showKey(payload);
+    event.target.reset();
+    statusLine.textContent = `${payload.participant.display_name} 已经入住。`;
+    await refresh();
+  } catch (error) {
+    statusLine.textContent = error.message;
+  }
+});
+
+document.querySelectorAll('[data-copy]').forEach((button) => {
+  button.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(document.querySelector(`#${button.dataset.copy}`).value);
+    const old = button.textContent;
+    button.textContent = '已复制';
+    setTimeout(() => { button.textContent = old; }, 1200);
+  });
+});
+
+refresh().catch((error) => { list.textContent = error.message; });
