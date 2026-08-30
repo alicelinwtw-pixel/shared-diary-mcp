@@ -95,6 +95,7 @@ class StatelessMCPProtocolTests(unittest.TestCase):
             },
         )
         self.assertEqual(initialized["result"]["serverInfo"]["name"], "Shared Diary")
+        self.assertEqual(initialized["result"]["serverInfo"]["version"], "0.2.0")
 
         notification = mcp_server.handle_mcp_message(
             self.actor,

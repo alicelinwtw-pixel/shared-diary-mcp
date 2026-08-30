@@ -1,6 +1,12 @@
 const key = location.pathname.split('/').filter(Boolean)[1];
 const apiBase = `/api/${encodeURIComponent(key)}`;
-let state = { me: null, participants: [], entries: [], timezone: 'Asia/Shanghai' };
+let state = {
+  me: null,
+  participants: [],
+  entries: [],
+  timezone: 'Asia/Shanghai',
+  authorId: null,
+};
 
 const presets = {
   "暖白墨绿": { paper: "#f6f0df", ink: "#26342f", accent: "#8a5b3d", reply: "#e8eee5" },
@@ -55,6 +61,34 @@ function renderAudience() {
     label.className = 'chip';
     label.innerHTML = `<input type="checkbox" value="${htmlEscape(item.id)}">${htmlEscape(item.display_name)}`;
     root.append(label);
+  });
+}
+
+function setAuthorFilter(authorId) {
+  state.authorId = authorId;
+  const url = new URL(location.href);
+  if (authorId) url.searchParams.set('author', authorId);
+  else url.searchParams.delete('author');
+  history.replaceState(null, '', url);
+  renderAuthorFilters();
+  loadTimeline().catch(error => {
+    document.querySelector('#emptyState').textContent = `翻页失败：${error.message}`;
+  });
+}
+
+function renderAuthorFilters() {
+  const root = document.querySelector('#authorFilters');
+  root.replaceChildren();
+  const choices = [{ id: null, display_name: '全部' }, ...state.participants];
+  choices.forEach(person => {
+    const button = document.createElement('button');
+    const selected = state.authorId === person.id;
+    button.type = 'button';
+    button.className = `author-filter${selected ? ' active' : ''}`;
+    button.textContent = person.display_name;
+    button.setAttribute('aria-pressed', String(selected));
+    button.addEventListener('click', () => setAuthorFilter(person.id));
+    root.append(button);
   });
 }
 
@@ -171,6 +205,10 @@ function renderTimeline() {
   const root = document.querySelector('#timeline');
   const empty = document.querySelector('#emptyState');
   root.innerHTML = '';
+  const selectedName = state.authorId ? participantName(state.authorId) : null;
+  empty.textContent = selectedName
+    ? `${selectedName} 还没有留下你能看到的日记。`
+    : '这里还是一页空白。第一行字在等你。';
   empty.classList.toggle('hidden', state.entries.length > 0);
   let currentDay = '';
   state.entries.forEach(entry => {
@@ -187,7 +225,8 @@ function renderTimeline() {
 }
 
 async function loadTimeline() {
-  const data = await api('/timeline?limit=80');
+  const authorQuery = state.authorId ? `&author_id=${encodeURIComponent(state.authorId)}` : '';
+  const data = await api(`/timeline?limit=80${authorQuery}`);
   state.entries = data.entries;
   renderTimeline();
 }
@@ -255,8 +294,13 @@ async function init() {
   const identity = await api('/me');
   state.me = identity.me; state.participants = identity.participants;
   state.timezone = identity.timezone || state.timezone;
+  const requestedAuthor = new URL(location.href).searchParams.get('author');
+  state.authorId = state.participants.some(item => item.id === requestedAuthor)
+    ? requestedAuthor
+    : null;
   document.querySelector('#welcome').textContent = `${state.me.display_name}，今天想留下什么？`;
   renderAudience();
+  renderAuthorFilters();
 
   document.querySelector('#visibility').addEventListener('change', event => {
     const value = event.target.value;

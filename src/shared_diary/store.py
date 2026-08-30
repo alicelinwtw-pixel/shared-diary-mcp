@@ -121,6 +121,9 @@ class DiaryStore:
             CREATE INDEX IF NOT EXISTS idx_entries_occurred
                 ON entries(occurred_at, created_at);
 
+            CREATE INDEX IF NOT EXISTS idx_entries_author_occurred
+                ON entries(author_id, occurred_at, created_at);
+
             CREATE TABLE IF NOT EXISTS entry_unlocks (
                 entry_id TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
                 participant_id TEXT NOT NULL REFERENCES participants(id),
@@ -293,6 +296,24 @@ class DiaryStore:
             "SELECT id, display_name, kind, created_at FROM participants ORDER BY created_at, id"
         ).fetchall()
         return [dict(row) for row in rows]
+
+    @synchronized
+    def rename_participant(
+        self,
+        participant_id: str,
+        display_name: str,
+    ) -> dict[str, Any]:
+        """Change only a participant's display name, preserving identity and keys."""
+        self._require_participant(participant_id)
+        name = display_name.strip()
+        if not name:
+            raise DiaryError("display_name cannot be empty")
+        with self.db:
+            self.db.execute(
+                "UPDATE participants SET display_name = ? WHERE id = ?",
+                (name, participant_id),
+            )
+        return self.participant(participant_id)
 
     @synchronized
     def set_notify_on_ai_write(self, participant_id: str, enabled: bool) -> None:
@@ -489,11 +510,16 @@ class DiaryStore:
         limit: int = 50,
         before: str | None = None,
         after: str | None = None,
+        author_id: str | None = None,
     ) -> list[dict[str, Any]]:
         self._require_participant(participant_id)
         limit = max(1, min(200, int(limit)))
         clauses: list[str] = []
         params: list[Any] = []
+        if author_id:
+            self._require_participant(author_id)
+            clauses.append("author_id = ?")
+            params.append(author_id)
         if before:
             clauses.append("occurred_at < ?")
             params.append(self._normalize_timestamp(before))

@@ -38,6 +38,12 @@ async function refresh() {
     kind.className = 'muted';
     kind.textContent = person.kind === 'ai' ? 'AI' : '人类';
     identity.append(name, kind);
+
+    const actions = document.createElement('div');
+    actions.className = 'participant-actions';
+    const rename = document.createElement('button');
+    rename.className = 'secondary';
+    rename.textContent = '改名字';
     const rotate = document.createElement('button');
     rotate.className = 'secondary';
     rotate.textContent = '换钥匙';
@@ -45,7 +51,47 @@ async function refresh() {
       if (!confirm(`为 ${person.display_name} 更换钥匙？旧链接会立刻失效。`)) return;
       showKey(await request(`/participants/${encodeURIComponent(person.id)}/rotate-key`, { method: 'POST' }));
     });
-    row.append(identity, rotate);
+    rename.addEventListener('click', () => {
+      const editor = document.createElement('form');
+      editor.className = 'participant-name-editor';
+      const input = document.createElement('input');
+      input.value = person.display_name;
+      input.required = true;
+      input.maxLength = 60;
+      input.setAttribute('aria-label', `${person.display_name} 的新名字`);
+      const save = document.createElement('button');
+      save.type = 'submit';
+      save.textContent = '保存';
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'secondary';
+      cancel.textContent = '取消';
+      cancel.addEventListener('click', () => {
+        editor.replaceWith(identity);
+        actions.hidden = false;
+      });
+      editor.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        statusLine.textContent = '正在改名字…';
+        try {
+          const payload = await request(`/participants/${encodeURIComponent(person.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ display_name: input.value }),
+          });
+          statusLine.textContent = `${person.display_name} 已改名为 ${payload.participant.display_name}，原来的钥匙仍然有效。`;
+          await refresh();
+        } catch (error) {
+          statusLine.textContent = error.message;
+        }
+      });
+      editor.append(input, save, cancel);
+      identity.replaceWith(editor);
+      actions.hidden = true;
+      input.focus();
+      input.select();
+    });
+    actions.append(rename, rotate);
+    row.append(identity, actions);
     list.append(row);
   }
 }

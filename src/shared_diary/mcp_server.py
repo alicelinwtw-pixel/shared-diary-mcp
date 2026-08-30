@@ -12,7 +12,8 @@ from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, R
 from starlette.routing import Route
 
 from .exporter import build_backup_archive
-from .store import DiaryError, DiaryStore, PermissionDenied
+from . import __version__
+from .store import DiaryError, DiaryStore, NotFound, PermissionDenied
 from .tools import DiaryTools
 
 
@@ -221,7 +222,7 @@ def handle_mcp_message(actor: str, message: Any) -> dict[str, Any] | None:
             {
                 "protocolVersion": requested or "2025-03-26",
                 "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": {"name": "Shared Diary", "version": "0.1.0-dev"},
+                "serverInfo": {"name": "Shared Diary", "version": __version__},
                 "instructions": MCP_INSTRUCTIONS,
             },
         )
@@ -277,7 +278,9 @@ async def mcp_endpoint(request: Request) -> Response:
 
 
 async def health(request) -> JSONResponse:
-    return JSONResponse({"ok": True, "service": "shared-diary-mcp", "version": "0.1.0"})
+    return JSONResponse(
+        {"ok": True, "service": "shared-diary-mcp", "version": __version__}
+    )
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -328,7 +331,10 @@ async def static_asset(request: Request):
 async def setup_page(request: Request):
     if not is_admin(request):
         return PlainTextResponse("Not found", status_code=404)
-    return FileResponse(STATIC_DIR / "setup.html")
+    return FileResponse(
+        STATIC_DIR / "setup.html",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 async def setup_asset(request: Request):
@@ -337,7 +343,10 @@ async def setup_asset(request: Request):
     name = str(request.path_params.get("name") or "")
     if name not in {"setup.js", "app.css"}:
         return PlainTextResponse("Not found", status_code=404)
-    return FileResponse(STATIC_DIR / name)
+    return FileResponse(
+        STATIC_DIR / name,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 async def admin_participants(request: Request):
@@ -385,6 +394,21 @@ async def admin_rotate_key(request: Request):
         return web_error(str(exc), 404)
 
 
+async def admin_participant(request: Request):
+    if not is_admin(request):
+        return web_error("not found", 404)
+    try:
+        data = await request.json()
+        participant_id = str(request.path_params.get("participant_id") or "")
+        participant = store.rename_participant(
+            participant_id,
+            str(data.get("display_name") or ""),
+        )
+        return JSONResponse({"ok": True, "participant": participant})
+    except (json.JSONDecodeError, DiaryError) as exc:
+        return web_error(str(exc), 404 if isinstance(exc, NotFound) else 400)
+
+
 async def api_me(request: Request):
     actor = web_actor(request)
     if actor is None:
@@ -410,6 +434,7 @@ async def api_timeline(request: Request):
             limit=int(request.query_params.get("limit", "50")),
             before=request.query_params.get("before"),
             after=request.query_params.get("after"),
+            author_id=request.query_params.get("author_id"),
         )
         return JSONResponse({"ok": True, "entries": entries})
     except (ValueError, DiaryError) as exc:
@@ -546,6 +571,11 @@ app = Starlette(
             "/admin-api/{admin_key}/participants/{participant_id}/rotate-key",
             admin_rotate_key,
             methods=["POST"],
+        ),
+        Route(
+            "/admin-api/{admin_key}/participants/{participant_id}",
+            admin_participant,
+            methods=["PATCH"],
         ),
         Route("/diary/{access_key}/", diary_page),
         Route("/diary/{access_key}/assets/{name}", static_asset),

@@ -18,12 +18,17 @@
 .copy-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .participant-list { display: grid; gap: 10px; }
 .participant-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px dashed var(--accent); }
-.participant-row > div { display: grid; gap: 3px; }
+.participant-row > div:not(.participant-actions) { display: grid; gap: 3px; }
+.participant-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.participant-name-editor { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; flex: 1; }
 .warning { color: #9b4b3f; }
 button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--accent); }
 @media (max-width: 640px) {
   .setup-form { grid-template-columns: 1fr; }
   .copy-row { grid-template-columns: 1fr; }
+  .participant-row { align-items: flex-start; flex-direction: column; }
+  .participant-actions { width: 100%; }
+  .participant-name-editor { width: 100%; grid-template-columns: 1fr auto auto; }
 }
 
 * { box-sizing: border-box; }
@@ -102,6 +107,10 @@ button { font: 700 .9rem/1 system-ui, sans-serif; cursor: pointer; }
 .timeline-section { padding: 56px 0 80px; }
 .timeline-heading { margin-bottom: 22px; }
 .timeline-actions { display: flex; align-items: center; gap: 16px; }
+.author-filters { display: flex; gap: 8px; margin: -4px 0 24px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: thin; }
+.author-filter { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; color: var(--ink); background: color-mix(in srgb, var(--paper) 80%, white 20%); }
+.author-filter.active { color: var(--paper); background: var(--accent); border-color: var(--accent); }
+.author-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .timeline { display: grid; gap: 18px; }
 .day-divider { display: flex; align-items: center; gap: 12px; color: var(--accent); margin: 24px 0 0; font-weight: 700; }
 .day-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }

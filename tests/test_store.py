@@ -24,6 +24,39 @@ class DiaryStoreTests(unittest.TestCase):
         self.assertEqual(self.store.read_entry(entry["id"], "human")["body"], entry["body"])
         self.assertEqual(self.store.read_entry(entry["id"], "companion")["body"], entry["body"])
 
+    def test_participant_rename_preserves_identity_entries_replies_and_key(self) -> None:
+        access_key = self.store.issue_access_key("assistant")
+        entry = self.store.write_entry("assistant", "改名前写下的日记。")
+        reply = self.store.reply_to_entry(entry["id"], "assistant", "改名前的回应。")
+
+        renamed = self.store.rename_participant("assistant", "知远")
+
+        self.assertEqual(renamed["id"], "assistant")
+        self.assertEqual(renamed["display_name"], "知远")
+        self.assertEqual(self.store.authenticate(access_key), "assistant")
+        self.assertEqual(self.store.read_entry(entry["id"], "human")["author_id"], "assistant")
+        self.assertEqual(
+            self.store.list_replies(entry["id"], "human")[0]["id"],
+            reply["id"],
+        )
+        with self.assertRaises(DiaryError):
+            self.store.rename_participant("assistant", "   ")
+
+    def test_timeline_can_filter_entry_authors_without_filtering_replies(self) -> None:
+        assistant_entry = self.store.write_entry("assistant", "Aster 的日记")
+        self.store.reply_to_entry(assistant_entry["id"], "companion", "Juniper 的回应")
+        self.store.write_entry("companion", "Juniper 的日记")
+
+        filtered = self.store.list_timeline("human", author_id="assistant")
+
+        self.assertEqual([item["id"] for item in filtered], [assistant_entry["id"]])
+        self.assertEqual(
+            self.store.list_replies(filtered[0]["id"], "human")[0]["author_id"],
+            "companion",
+        )
+        with self.assertRaises(DiaryError):
+            self.store.list_timeline("human", author_id="missing")
+
     def test_only_author_can_edit_entry(self) -> None:
         entry = self.store.write_entry("human", "写错了一个字")
         edited = self.store.edit_entry(entry["id"], "human", "已经改好了")
