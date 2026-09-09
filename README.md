@@ -4,7 +4,7 @@ emoji: 📖
 colorFrom: yellow
 colorTo: green
 sdk: gradio
-python_version: 3.11
+python_version: 3.12.12
 app_file: app.py
 pinned: false
 ---
@@ -120,7 +120,9 @@ python -m unittest discover -s tests -v
 
 ## 部署到 Hugging Face Spaces
 
-项目兼容 CPU Basic 与 ZeroGPU，完整步骤见 [DEPLOY_HF.md](DEPLOY_HF.md)。生产部署必须使用持久化存储，并妥善保管管理页、参与者网页和 MCP 地址。
+项目可作为 Gradio Space 部署，完整步骤见 [DEPLOY_HF.md](DEPLOY_HF.md)。当前 Hugging Face 对 Gradio/Docker compute、ZeroGPU、Space 可见性和 Storage Bucket 的规则会随平台更新；部署前请按文档中的“部署前检查”确认账号方案、硬件与外部 MCP 可访问性。
+
+如果要让 ChatGPT 或其他外部 MCP 客户端直接访问 `*.hf.space` 地址，Private Space 通常不合适，因为运行中的应用也只对所有者/协作者开放。免费账号通常需要 Public Space；支持 Protected visibility 的付费方案可以隐藏源码，同时保持应用端点可访问。无论哪种模式，都不要公开管理页地址、参与者日记地址或 MCP 地址。
 
 ## 隐私与安全
 
